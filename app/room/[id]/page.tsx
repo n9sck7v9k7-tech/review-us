@@ -1,28 +1,23 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabaseClient' // 우리가 만든 연결 도구 가져오기
+import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
 
 export default function RoomPage({ params }: { params: { id: string } }) {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState('interview') // 현재 탭
-  const [isSubmitting, setIsSubmitting] = useState(false) // 전송 중인지 확인
+  const [activeTab, setActiveTab] = useState('interview')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // 1. 점수 관리 (화면의 별점들)
   const [scores, setScores] = useState({ score1: 0, score2: 0 })
-
-  // 2. 텍스트 관리 (화면의 입력창들)
   const [feedbackText, setFeedbackText] = useState('')
 
-  // 3. 탭이 바뀔 때마다 점수/텍스트 초기화 (섞이지 않게)
   const handleTabChange = (tab: string) => {
     setActiveTab(tab)
     setScores({ score1: 0, score2: 0 })
     setFeedbackText('')
   }
 
-  // 4. [피드백 보내기] 버튼을 눌렀을 때 실행되는 진짜 기능
   const handleSubmit = async () => {
     if (scores.score1 === 0 || scores.score2 === 0) {
       alert('점수를 모두 선택해주세요! 🥺')
@@ -32,15 +27,13 @@ export default function RoomPage({ params }: { params: { id: string } }) {
     const confirmMsg = window.confirm('정말 피드백을 보낼까요?')
     if (!confirmMsg) return
 
-    setIsSubmitting(true) // "보내는 중..." 표시 시작
+    setIsSubmitting(true)
 
-    // 데이터베이스(Supabase)에 보낼 데이터 보따리 싸기
     const dataToSave: any = {
-      subject_type: activeTab, // 과목 (심층면접/수업실연/영어)
-      // session_id: params.id, // (나중에 실제 방 기능 완성되면 주석 해제)
+      session_id: params.id, // 방 번호도 같이 저장! (중요)
+      subject_type: activeTab,
     }
 
-    // 탭에 따라 다른 항목으로 저장
     if (activeTab === 'interview') {
       dataToSave.interview_score_attitude = scores.score1
       dataToSave.interview_score_logic = scores.score2
@@ -55,32 +48,36 @@ export default function RoomPage({ params }: { params: { id: string } }) {
       dataToSave.english_correction = feedbackText
     }
 
-    // Supabase로 전송!
     const { error } = await supabase.from('feedbacks').insert([dataToSave])
 
     if (error) {
       console.error(error)
-      alert('전송 실패! 😭 개발자에게 문의하세요.')
+      alert('전송 실패! 😭')
     } else {
       alert('피드백이 성공적으로 저장되었어요! 🎉')
-      // 입력창 비우기
       setScores({ score1: 0, score2: 0 })
       setFeedbackText('')
     }
     
-    setIsSubmitting(false) // "보내는 중" 끝
+    setIsSubmitting(false)
   }
 
   return (
     <div className="min-h-screen bg-[#F0FAF8] p-4 font-sans text-slate-700 pb-24">
-      {/* 상단 헤더 */}
+      
+      {/* 상단 헤더 (수정됨: 결과 보기 버튼 추가) */}
       <div className="max-w-md mx-auto mb-6 flex justify-between items-center">
         <div className="text-lg font-bold text-[#3ACDC8] cursor-pointer" onClick={() => router.push('/')}>
           ReviewUs
         </div>
-        <div className="bg-white px-3 py-1 rounded-full text-xs shadow-sm text-gray-500">
-          스터디 룸
-        </div>
+        
+        {/* 여기가 추가된 버튼입니다! */}
+        <button 
+          onClick={() => router.push(`/room/${params.id}/result`)}
+          className="bg-white border border-[#3ACDC8] text-[#3ACDC8] px-3 py-1 rounded-full text-xs font-bold shadow-sm hover:bg-[#F0FAF8] transition-colors"
+        >
+          📊 결과 보기
+        </button>
       </div>
 
       <div className="max-w-md mx-auto bg-white rounded-3xl shadow-xl overflow-hidden border-2 border-white">
